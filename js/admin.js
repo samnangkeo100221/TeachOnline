@@ -16,10 +16,8 @@ const AdminEngine = {
     const session = sessionStorage.getItem("teachonline_teacher_auth");
     if (session === "true") {
       this.isLoggedIn = true;
-      this.showDashboard();
     } else {
       this.isLoggedIn = false;
-      this.showLoginModal();
     }
   },
 
@@ -39,45 +37,23 @@ const AdminEngine = {
   // ==========================================
   // AUTHENTICATION
   // ==========================================
-  showLoginModal() {
-    const modal = document.getElementById("teacherAuthModal");
-    if (modal) modal.style.display = "flex";
-  },
+  handleTeacherLogin() {
+    const pinInput = document.getElementById("teacherLoginPin");
+    const errText = document.getElementById("teacherLoginError");
+    if (!pinInput) return;
 
-  closeLoginModal() {
-    const modal = document.getElementById("teacherAuthModal");
-    if (modal) modal.style.display = "none";
-  },
-
-  verifyTeacherPin() {
-    const pinInput = document.getElementById("teacherPinInput");
-    const errText = document.getElementById("teacherPinError");
     const enteredPin = pinInput.value.trim();
     const settings = window.TeachData.getSettings();
 
     if (enteredPin === settings.teacherPin || enteredPin === "123456") {
       this.isLoggedIn = true;
       sessionStorage.setItem("teachonline_teacher_auth", "true");
-      this.closeLoginModal();
-      this.showDashboard();
       pinInput.value = "";
       if (errText) errText.innerText = "";
+      window.App.showTeacherWorkspace();
     } else {
-      if (errText) errText.innerText = "លេខកូដសម្ងាត់មិនត្រឹមត្រូវទេ! (Default: 123456)";
+      if (errText) errText.innerText = "លេខកូដសម្ងាត់គ្រូមិនត្រឹមត្រូវទេ! (Default PIN: 123456)";
     }
-  },
-
-  logoutTeacher() {
-    this.isLoggedIn = false;
-    sessionStorage.removeItem("teachonline_teacher_auth");
-    window.App.switchToStudentView();
-  },
-
-  showDashboard() {
-    document.getElementById("studentView").style.display = "none";
-    document.getElementById("teacherView").style.display = "block";
-    this.switchTab(this.activeTab || 'lessons');
-    this.refreshStats();
   },
 
   switchTab(tabName) {
@@ -241,7 +217,6 @@ const AdminEngine = {
     const lessonFilter = document.getElementById("filterQuestionLesson");
     if (!tbody) return;
 
-    // Populate question filter dropdown
     const lessons = await window.TeachData.getLessons();
     if (lessonFilter) {
       const currentVal = lessonFilter.value;
@@ -303,7 +278,6 @@ const AdminEngine = {
     document.getElementById("questionForm").reset();
     document.getElementById("questionIdInput").value = "";
 
-    // Fill Lesson selector in question form
     await this.fillQuestionModalLessons();
     document.getElementById("questionModal").style.display = "flex";
   },
@@ -562,7 +536,7 @@ const AdminEngine = {
       return;
     }
 
-    let csvContent = "\uFEFF"; // UTF-8 BOM
+    let csvContent = "\uFEFF";
     csvContent += "ID,Student Name,Lesson,Level,Score,Total,Percentage,Date,Time\n";
 
     results.forEach(r => {

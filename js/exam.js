@@ -33,6 +33,7 @@ const ExamEngine = {
         const lessonName = lessonSelect.value;
         levelSelect.innerHTML = '<option value="">-- ជ្រើសរើស Level --</option>';
         this.hideMediaContainer();
+        this.hideExamSection();
 
         if (!lessonName) return;
         const allLessons = await window.TeachData.getLessons();
@@ -64,7 +65,7 @@ const ExamEngine = {
   async populateStudentDropdown() {
     const studentSelect = document.getElementById("studentSelect");
     if (!studentSelect) return;
-    studentSelect.innerHTML = '<option value="">-- ជ្រើសរើសឈ្មោះសិស្ស --</option>';
+    studentSelect.innerHTML = '<option value="">-- ជ្រើសរើសឈ្មោះសិស្សរបស់អ្នក --</option>';
     const students = await window.TeachData.getStudents();
     students.forEach(s => {
       const opt = document.createElement("option");
@@ -77,7 +78,7 @@ const ExamEngine = {
   async populateLessonDropdown() {
     const lessonSelect = document.getElementById("lessonSelect");
     if (!lessonSelect) return;
-    lessonSelect.innerHTML = '<option value="">-- ជ្រើសរើសមេរៀន --</option>';
+    lessonSelect.innerHTML = '<option value="">-- ជ្រើសរើសមេរៀនដើម្បីសិក្សា --</option>';
     const lessons = await window.TeachData.getLessons();
     const uniqueNames = [...new Set(lessons.map(l => l.lesson_name))];
     uniqueNames.forEach(name => {
@@ -94,6 +95,7 @@ const ExamEngine = {
 
     if (!lessonName || !level) {
       this.hideMediaContainer();
+      this.hideExamSection();
       return;
     }
 
@@ -101,10 +103,13 @@ const ExamEngine = {
     const lesson = allLessons.find(l => l.lesson_name === lessonName && l.level === level);
     if (!lesson) {
       this.hideMediaContainer();
+      this.hideExamSection();
       return;
     }
 
     this.currentLessonData = lesson;
+    this.selectedLesson = lessonName;
+    this.selectedLevel = level;
     this.displayLessonAndVideos(lesson);
   },
 
@@ -115,6 +120,7 @@ const ExamEngine = {
     const videoContent1 = document.getElementById("videoContent1");
     const videoContent2 = document.getElementById("videoContent2");
     const lessonDataContainer = document.getElementById("lessonDataContainer");
+    const examStartPrompt = document.getElementById("examStartPrompt");
 
     if (!mediaContainer) return;
 
@@ -164,7 +170,8 @@ const ExamEngine = {
     setupSection("lsnErrorsContainer", "lsnErrors", lesson.common_errors);
 
     lessonDataContainer.style.display = "block";
-    mediaContainer.style.display = hasMedia ? "block" : "none";
+    mediaContainer.style.display = "block";
+    if (examStartPrompt) examStartPrompt.style.display = "block";
 
     // Trigger MathJax typeset if present
     if (window.MathJax && window.MathJax.typesetPromise) {
@@ -175,69 +182,82 @@ const ExamEngine = {
   hideMediaContainer() {
     const mediaContainer = document.getElementById("mediaContainer");
     if (mediaContainer) mediaContainer.style.display = "none";
+    const examStartPrompt = document.getElementById("examStartPrompt");
+    if (examStartPrompt) examStartPrompt.style.display = "none";
+  },
+
+  hideExamSection() {
+    const examSection = document.getElementById("examSection");
+    if (examSection) examSection.classList.add("hidden");
+    const timer = document.getElementById("timer");
+    if (timer) timer.classList.add("hidden");
   },
 
   // ==========================================
-  // STUDENT LOGIN & START EXAM
+  // STUDENT LOGIN IN DEDICATED VIEW
   // ==========================================
-  async loginAndStartExam() {
-    this.examSubmitted = false;
-    this.clearMatchingState();
-
+  async handleStudentLogin() {
     const studentSelect = document.getElementById("studentSelect");
     const passwordInput = document.getElementById("passwordInput");
-    const lessonSelect = document.getElementById("lessonSelect");
-    const levelSelect = document.getElementById("levelSelect");
-    const msgDiv = document.getElementById("loginMessage");
+    const msgDiv = document.getElementById("studentLoginMessage");
 
     const name = studentSelect.value.trim();
     const pass = passwordInput.value.trim();
-    const lesson = lessonSelect.value.trim();
-    const level = levelSelect.value.trim();
 
-    if (!name || !pass || !lesson || !level) {
-      this.showLoginMessage("សូមបំពេញព័ត៌មាន (ឈ្មោះ លេខសម្ងាត់ មេរៀន និង Level) ឱ្យបានគ្រប់គ្រាន់!", true);
+    if (!name || !pass) {
+      this.showLoginMessage("សូមជ្រើសរើសឈ្មោះ និងបញ្ចូលលេខសម្ងាត់!", true);
       return;
     }
 
     this.showLoginMessage("កំពុងផ្ទៀងផ្ទាត់...", false);
     const auth = await window.TeachData.authenticateStudent(name, pass);
     if (!auth.success) {
-      this.showLoginMessage(auth.message || "ឈ្មោះសិស្ស ឬលេខសម្ងាត់មិនត្រឹមត្រូវ!", true);
+      this.showLoginMessage(auth.message || "លេខសម្ងាត់មិនត្រឹមត្រូវទេ!", true);
       return;
     }
 
     this.currentStudent = auth.student;
-    this.selectedLesson = lesson;
-    this.selectedLevel = level;
+    sessionStorage.setItem("teachonline_student_auth", JSON.stringify(auth.student));
+    passwordInput.value = "";
+    if (msgDiv) msgDiv.innerText = "";
 
-    // Load Exam duration
-    const allLessons = await window.TeachData.getLessons();
-    const lObj = allLessons.find(l => l.lesson_name === lesson && l.level === level);
-    const durationMin = (lObj && lObj.duration_minutes > 0) ? lObj.duration_minutes : 60;
-    this.examDuration = durationMin * 60;
-
-    await this.loadQuestionsAndStart();
+    window.App.showStudentWorkspace(auth.student);
   },
 
-  async loadQuestionsAndStart() {
-    this.showLoginMessage("កំពុងទាញយកសំណួរ...", false);
-    const list = await window.TeachData.getQuestions(this.selectedLesson, this.selectedLevel);
+  // ==========================================
+  // START EXAM FOR SELECTED LESSON
+  // ==========================================
+  async startExamNow() {
+    if (!this.selectedLesson || !this.selectedLevel) {
+      alert("សូមជ្រើសរើសមេរៀន និង Level ជាមុនសិន!");
+      return;
+    }
 
+    this.examSubmitted = false;
+    this.clearMatchingState();
+
+    // Duration
+    const durationMin = (this.currentLessonData && this.currentLessonData.duration_minutes > 0) ? this.currentLessonData.duration_minutes : 60;
+    this.examDuration = durationMin * 60;
+
+    const list = await window.TeachData.getQuestions(this.selectedLesson, this.selectedLevel);
     if (!list || list.length === 0) {
-      this.showLoginMessage("មិនទាន់មានសំណួរសម្រាប់មេរៀននេះនៅឡើយទេ! សូមទាក់ទងលោកគ្រូ។", true);
+      alert("មិនទាន់មានសំណួរប្រឡងសម្រាប់មេរៀននេះនៅឡើយទេ! សូមទាក់ទងលោកគ្រូ។");
       return;
     }
 
     this.questions = list.map((q, idx) => this.normalizeQuestionData(q, idx));
 
-    document.getElementById("loginSection").classList.add("hidden");
-    document.getElementById("examSection").classList.remove("hidden");
-    document.getElementById("examTitle").textContent = `${this.selectedLesson} (${this.selectedLevel}) - សិស្ស៖ ${this.currentStudent.name}`;
+    const examSection = document.getElementById("examSection");
+    examSection.classList.remove("hidden");
+    document.getElementById("examTitle").textContent = `📝 ការប្រឡង៖ ${this.selectedLesson} (${this.selectedLevel})`;
+
+    const timer = document.getElementById("timer");
+    if (timer) timer.classList.remove("hidden");
 
     this.renderQuestions();
     this.startTimer();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    examSection.scrollIntoView({ behavior: "smooth" });
   },
 
   normalizeQuestionData(q, index) {
@@ -350,7 +370,7 @@ const ExamEngine = {
           }
         }
 
-        // Render question by type
+        // Render question type
         if (group.type.startsWith("LISTEN")) {
           let audioBtn = "";
           if (q.speechText) {
@@ -518,7 +538,6 @@ const ExamEngine = {
     if (!this.matchingLines[qId]) this.matchingLines[qId] = [];
     if (!this.matchingAnswers[qId]) this.matchingAnswers[qId] = {};
 
-    // Remove existing lines connected to this left or right
     this.matchingLines[qId] = this.matchingLines[qId].filter(item => {
       if (item.leftEl === leftEl || item.rightEl === rightEl) {
         if (item.line) {
@@ -691,7 +710,7 @@ const ExamEngine = {
   },
 
   updateTimerDisplay(seconds) {
-    const timerEl = document.getElementById("timer");
+    const timerEl = document.querySelector("#timer span");
     if (!timerEl) return;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -699,7 +718,7 @@ const ExamEngine = {
   },
 
   // ==========================================
-  // ANSWER EXTRACTION & SUBMISSION
+  // GET STUDENT ANSWER
   // ==========================================
   getStudentAnswer(q) {
     const type = q.type;
@@ -750,6 +769,9 @@ const ExamEngine = {
     return input ? input.value.trim() : "";
   },
 
+  // ==========================================
+  // SUBMIT EXAM & GRADING
+  // ==========================================
   async submitExam() {
     if (this.examSubmitted) return;
     const submitBtn = document.querySelector("#examSection .submit-btn");
@@ -876,7 +898,6 @@ const ExamEngine = {
           qObj.needsAICheck = true;
         }
       } else {
-        // Text / Short answer
         const possibleAnswers = String(q.correctAnswer || "").split("|").map(a => this.normalizeAnswer(a));
         if (possibleAnswers.includes(cleanStudent)) {
           qObj.score = points;
@@ -959,8 +980,9 @@ const ExamEngine = {
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     // Save to Supabase and forward to Google Sheet
+    const studentName = this.currentStudent ? this.currentStudent.name : "សិស្ស";
     await window.TeachData.saveResult({
-      studentName: this.currentStudent.name,
+      studentName: studentName,
       lesson: this.selectedLesson,
       level: this.selectedLevel,
       score: totalScore,
@@ -1008,12 +1030,13 @@ const ExamEngine = {
     const oldSummary = document.getElementById("examResultSummary");
     if (oldSummary) oldSummary.remove();
 
+    const studentName = this.currentStudent ? this.currentStudent.name : "សិស្ស";
     const summary = document.createElement("div");
     summary.id = "examResultSummary";
     summary.className = "result-box";
     summary.innerHTML = `
       <h2>🏆 លទ្ធផលប្រឡង</h2>
-      <h3 style="color:var(--text-main); margin-bottom:5px;">${this.escapeHtml(this.currentStudent.name)}</h3>
+      <h3 style="color:var(--text-main); margin-bottom:5px;">${this.escapeHtml(studentName)}</h3>
       <p style="color:var(--text-muted); font-size:22px;">${this.escapeHtml(this.selectedLesson)} | ${this.escapeHtml(this.selectedLevel)}</p>
       <div style="font-size:3.5rem; font-weight:800; color:var(--primary); margin:15px 0;">${score} / ${total}</div>
       <div style="font-size:2rem; font-weight:700; color:${percentage >= 50 ? 'var(--success)' : 'var(--error)'};">${percentage}%</div>
@@ -1121,23 +1144,17 @@ const ExamEngine = {
       this.timerInterval = null;
     }
     this.examSubmitted = false;
-    this.currentStudent = null;
     this.questions = [];
 
     const oldSummary = document.getElementById("examResultSummary");
     if (oldSummary) oldSummary.remove();
 
-    document.getElementById("passwordInput").value = "";
-    document.getElementById("examSection").classList.add("hidden");
-    document.getElementById("loginSection").classList.remove("hidden");
+    this.hideExamSection();
     window.scrollTo({ top: 0, behavior: "smooth" });
   },
 
-  // ==========================================
-  // HELPERS: AUDIO, TTS, STRING UTILS
-  // ==========================================
   showLoginMessage(msg, isError) {
-    const el = document.getElementById("loginMessage");
+    const el = document.getElementById("studentLoginMessage");
     if (!el) return;
     el.innerText = msg;
     el.style.color = isError ? "red" : "green";
@@ -1231,6 +1248,7 @@ const ExamEngine = {
     return String(val || "")
       .replace(/&/g, "&amp;")
       .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
   }
