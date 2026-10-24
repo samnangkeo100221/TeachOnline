@@ -15,10 +15,34 @@ const INITIAL_DATA = {
   },
 
   students: [
-    { id: 1, name: "កែវ សំណាង", password: "1234", phone: "012345678" },
-    { id: 2, name: "សិស្ស គំរូ", password: "1234", phone: "098765432" },
-    { id: 3, name: "សុខ វិសាល", password: "1234", phone: "088123456" },
-    { id: 4, name: "ចាន់ ដារ៉ា", password: "1234", phone: "077889900" }
+    { 
+      id: 1, 
+      name: "កែវ សំណាង", 
+      password: "1234", 
+      phone: "012345678",
+      photo: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"
+    },
+    { 
+      id: 2, 
+      name: "សិស្ស គំរូ", 
+      password: "1234", 
+      phone: "098765432",
+      photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80"
+    },
+    { 
+      id: 3, 
+      name: "សុខ វិសាល", 
+      password: "1234", 
+      phone: "088123456",
+      photo: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80"
+    },
+    { 
+      id: 4, 
+      name: "ចាន់ ដារ៉ា", 
+      password: "1234", 
+      phone: "077889900",
+      photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80"
+    }
   ],
 
   lessons: [

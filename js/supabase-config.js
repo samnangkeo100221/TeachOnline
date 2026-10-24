@@ -74,7 +74,7 @@ const TeachData = {
   },
 
   // ==========================================
-  // STUDENTS
+  // STUDENTS (WITH PHOTO & EDIT SUPPORT)
   // ==========================================
   getStudents: async function() {
     if (this.isSupabaseConnected && this.supabaseClient) {
@@ -102,26 +102,36 @@ const TeachData = {
     return window.INITIAL_DATA.students;
   },
 
-  saveStudent: async function(student) {
+  saveStudent: async function(student, originalName) {
     let list = await this.getStudents();
-    const existingIndex = list.findIndex(s => String(s.name).trim().toLowerCase() === String(student.name).trim().toLowerCase());
+    const searchTarget = originalName ? originalName : student.name;
+    const existingIndex = list.findIndex(s => String(s.name).trim().toLowerCase() === String(searchTarget).trim().toLowerCase());
     
     if (existingIndex > -1) {
       list[existingIndex] = { ...list[existingIndex], ...student };
     } else {
-      student.id = Date.now();
+      student.id = student.id || Date.now();
       list.push(student);
     }
     localStorage.setItem("teachonline_students", JSON.stringify(list));
 
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
+        // If name changed, delete old record
+        if (originalName && originalName !== student.name) {
+          await this.supabaseClient
+            .from('teach_online_students')
+            .delete()
+            .eq('name', originalName);
+        }
+
         await this.supabaseClient
           .from('teach_online_students')
           .upsert({
             name: student.name,
             password: student.password,
-            phone: student.phone || ''
+            phone: student.phone || '',
+            photo: student.photo || ''
           }, { onConflict: 'name' });
       } catch(e) {
         console.warn("Supabase student save failed:", e);
@@ -389,7 +399,7 @@ const TeachData = {
 
   saveResult: async function(resultData) {
     const now = new Date();
-    const dateStr = now.toLocaleDateString("en-GB"); // dd/mm/yyyy
+    const dateStr = now.toLocaleDateString("en-GB");
     const timeStr = now.toLocaleTimeString("en-GB");
 
     const record = {
@@ -407,7 +417,6 @@ const TeachData = {
       created_at: now.toISOString()
     };
 
-    // 1. Save to LocalStorage
     let localResults = [];
     try {
       const stored = localStorage.getItem("teachonline_results");
@@ -416,7 +425,6 @@ const TeachData = {
     localResults.unshift(record);
     localStorage.setItem("teachonline_results", JSON.stringify(localResults));
 
-    // 2. Save to Supabase
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
         const { data, error } = await this.supabaseClient
@@ -430,18 +438,12 @@ const TeachData = {
       }
     }
 
-    // 3. Forward to Google Sheet Web App (if configured)
     this.forwardToGoogleSheet(record);
-
-    // 4. Forward to Telegram
     this.sendTelegramNotification(record);
 
     return record;
   },
 
-  /**
-   * Send submission data to Google Sheet Web App endpoint
-   */
   forwardToGoogleSheet: async function(record) {
     const settings = this.getSettings();
     if (!settings.googleSheetUrl || settings.googleSheetUrl.trim() === '') {
@@ -461,7 +463,6 @@ const TeachData = {
         time: record.submission_time
       };
 
-      // Use fetch with no-cors or standard POST
       await fetch(settings.googleSheetUrl.trim(), {
         method: "POST",
         mode: "no-cors",
@@ -474,9 +475,6 @@ const TeachData = {
     }
   },
 
-  /**
-   * Send Telegram notification message
-   */
   sendTelegramNotification: async function(record) {
     const settings = this.getSettings();
     if (!settings.telegramBotToken || !settings.telegramChatId) return;
@@ -504,6 +502,5 @@ const TeachData = {
   }
 };
 
-// Initialize on page load
 window.TeachData = TeachData;
 window.addEventListener("DOMContentLoaded", () => TeachData.init());

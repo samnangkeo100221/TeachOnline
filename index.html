@@ -135,9 +135,11 @@
     <div class="container">
       <!-- Student Profile Greeting Banner -->
       <div class="modern-card" style="padding: 1.5rem 2rem; margin-bottom: 1.5rem; background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%); border-left: 6px solid #0284c7; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-        <div style="display: flex; align-items: center; gap: 15px;">
-          <div style="width: 60px; height: 60px; border-radius: 18px; background: #0284c7; color: white; display: flex; align-items: center; justify-content: center; font-size: 28px;">
-            <i class="fa-solid fa-user-graduate"></i>
+        <div style="display: flex; align-items: center; gap: 18px;">
+          <div id="studentAvatarDisplay">
+            <div class="student-workspace-avatar-fallback">
+              <i class="fa-solid fa-user-graduate"></i>
+            </div>
           </div>
           <div>
             <h2 style="margin: 0; color: #0f172a; font-size: 1.7rem; font-weight: 800;">
@@ -452,11 +454,12 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th style="width: 60px;">#</th>
+                <th style="width: 50px;">#</th>
+                <th style="width: 70px; text-align: center;">រូបថត</th>
                 <th>ឈ្មោះសិស្ស</th>
                 <th>លេខសម្ងាត់</th>
                 <th>លេខទូរស័ព្ទ</th>
-                <th style="width: 120px;">សកម្មភាព</th>
+                <th style="width: 180px;">សកម្មភាព</th>
               </tr>
             </thead>
             <tbody id="studentsTableBody"></tbody>
@@ -778,15 +781,37 @@
     </div>
   </div>
 
-  <!-- Student Add Modal -->
+  <!-- Student Add / Edit Modal -->
   <div id="studentModal" class="modal-backdrop" style="display: none;">
-    <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-content" style="max-width: 580px;">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-user-plus"></i> បន្ថែមសិស្សថ្មី</h3>
+        <h3 id="studentModalTitle"><i class="fa-solid fa-user-pen"></i> បន្ថែមសិស្សថ្មី</h3>
         <button class="close-modal-btn" onclick="AdminEngine.closeStudentModal()">&times;</button>
       </div>
 
       <form id="studentForm" onsubmit="AdminEngine.saveStudentForm(event)">
+        <input type="hidden" id="studentOriginalName">
+        <input type="hidden" id="studentPhotoInput">
+
+        <!-- Student Photo Upload & Live Preview -->
+        <div class="student-photo-uploader-box">
+          <div class="student-avatar-preview-box" id="studentPhotoPreviewBox">
+            <div class="student-avatar-preview-placeholder">
+              <i class="fa-solid fa-camera"></i>
+            </div>
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 18px; margin-bottom: 6px;"><i class="fa-solid fa-image"></i> រូបថតសិស្ស (បញ្ចូលរូបថ្មី)</label>
+            <input type="file" id="studentPhotoFileInput" accept="image/*" style="font-size: 15px; padding: 6px 10px; min-height: auto; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 8px; background: #fff;">
+            <div style="display: flex; gap: 6px;">
+              <input type="text" id="studentPhotoUrlManual" placeholder="ឬបិទភ្ជាប់ Link រូបថត (URL)..." style="font-size: 15px; min-height: 40px; padding: 6px 10px;" oninput="AdminEngine.setStudentPhotoPreview(this.value); document.getElementById('studentPhotoInput').value = this.value;">
+              <button type="button" onclick="AdminEngine.clearStudentPhoto(); document.getElementById('studentPhotoUrlManual').value='';" style="background: #ef4444 !important; color: white; width: auto !important; min-height: 40px !important; padding: 6px 14px !important; font-size: 15px !important;" title="លុបរូបថតចេញ">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>ឈ្មោះសិស្ស *</label>
           <input type="text" id="studentNameInput" placeholder="ឧទាហរណ៍៖ សុខ សាន" required>

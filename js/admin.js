@@ -32,6 +32,21 @@ const AdminEngine = {
         this.switchTab(target);
       });
     });
+
+    // Student Photo File Upload Listener
+    const photoFileInput = document.getElementById("studentPhotoFileInput");
+    if (photoFileInput) {
+      photoFileInput.addEventListener("change", (e) => this.handleStudentPhotoFile(e));
+    }
+
+    // Student Photo URL Input Live Preview Listener
+    const photoUrlInput = document.getElementById("studentPhotoInput");
+    if (photoUrlInput) {
+      photoUrlInput.addEventListener("input", (e) => {
+        const val = e.target.value.trim();
+        this.setStudentPhotoPreview(val);
+      });
+    }
   },
 
   // ==========================================
@@ -365,30 +380,38 @@ const AdminEngine = {
   },
 
   // ==========================================
-  // TAB 3: STUDENTS CRUD
+  // TAB 3: STUDENTS CRUD (WITH PHOTO & EDIT)
   // ==========================================
   async loadStudentsTable() {
     const tbody = document.getElementById("studentsTableBody");
     if (!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px;">កំពុងទាញយកបញ្ជីសិស្ស...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">កំពុងទាញយកបញ្ជីសិស្ស...</td></tr>`;
 
     const students = await window.TeachData.getStudents();
     this.refreshStats();
 
     if (students.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px;">គ្មានទិន្នន័យសិស្សទេ។ សូមចុច "បន្ថែមសិស្សថ្មី"</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">គ្មានទិន្នន័យសិស្សទេ។ សូមចុច "បន្ថែមសិស្សថ្មី"</td></tr>`;
       return;
     }
 
     tbody.innerHTML = "";
     students.forEach((s, idx) => {
       const tr = document.createElement("tr");
+      const photoHtml = s.photo ? 
+        `<img src="${this.escapeAttribute(s.photo)}" class="student-table-avatar" alt="Avatar" onerror="this.outerHTML='<div class=\\'student-table-avatar-fallback\\'><i class=\\'fa-solid fa-user\\'></i></div>'">` :
+        `<div class="student-table-avatar-fallback"><i class="fa-solid fa-user"></i></div>`;
+
       tr.innerHTML = `
         <td style="font-weight:bold;">${idx + 1}</td>
-        <td style="font-weight:700; color:var(--primary); font-size:20px;">${this.escapeHtml(s.name)}</td>
+        <td style="width: 70px; text-align: center;">
+          ${photoHtml}
+        </td>
+        <td style="font-weight:700; color:var(--text-main); font-size:19px;">${this.escapeHtml(s.name)}</td>
         <td><code style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:18px;">${this.escapeHtml(s.password)}</code></td>
         <td>${this.escapeHtml(s.phone || '-')}</td>
         <td>
+          <button class="action-btn edit-btn" onclick="AdminEngine.openEditStudentModal('${this.escapeAttribute(s.name)}')"><i class="fa-solid fa-pen-to-square"></i> កែប្រែ</button>
           <button class="action-btn delete-btn" onclick="AdminEngine.confirmDeleteStudent('${this.escapeAttribute(s.name)}')"><i class="fa-solid fa-trash"></i> លុប</button>
         </td>
       `;
@@ -397,7 +420,27 @@ const AdminEngine = {
   },
 
   openAddStudentModal() {
+    document.getElementById("studentModalTitle").innerText = "➕ បន្ថែមសិស្សថ្មី";
     document.getElementById("studentForm").reset();
+    document.getElementById("studentOriginalName").value = "";
+    document.getElementById("studentPhotoInput").value = "";
+    this.setStudentPhotoPreview("");
+    document.getElementById("studentModal").style.display = "flex";
+  },
+
+  async openEditStudentModal(studentName) {
+    const students = await window.TeachData.getStudents();
+    const s = students.find(item => item.name === studentName);
+    if (!s) return;
+
+    document.getElementById("studentModalTitle").innerText = "✏️ កែប្រែព័ត៌មានសិស្ស";
+    document.getElementById("studentOriginalName").value = s.name;
+    document.getElementById("studentNameInput").value = s.name;
+    document.getElementById("studentPasswordInput").value = s.password || "";
+    document.getElementById("studentPhoneInput").value = s.phone || "";
+    document.getElementById("studentPhotoInput").value = s.photo || "";
+    this.setStudentPhotoPreview(s.photo || "");
+
     document.getElementById("studentModal").style.display = "flex";
   },
 
@@ -405,22 +448,60 @@ const AdminEngine = {
     document.getElementById("studentModal").style.display = "none";
   },
 
+  handleStudentPhotoFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("សូមជ្រើសរើសឯកសារជារូបភាព (JPEG, PNG, WebP)!");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target.result;
+      document.getElementById("studentPhotoInput").value = dataUrl;
+      this.setStudentPhotoPreview(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  },
+
+  setStudentPhotoPreview(url) {
+    const previewContainer = document.getElementById("studentPhotoPreviewBox");
+    if (!previewContainer) return;
+
+    if (url && url.trim() !== "") {
+      previewContainer.innerHTML = `<img src="${this.escapeAttribute(url)}" class="student-avatar-preview-img" alt="Student Photo" onerror="this.outerHTML='<div class=\\'student-avatar-preview-placeholder\\'><i class=\\'fa-solid fa-user\\'></i></div>'">`;
+    } else {
+      previewContainer.innerHTML = `<div class="student-avatar-preview-placeholder"><i class="fa-solid fa-camera"></i></div>`;
+    }
+  },
+
+  clearStudentPhoto() {
+    document.getElementById("studentPhotoInput").value = "";
+    const fileInp = document.getElementById("studentPhotoFileInput");
+    if (fileInp) fileInp.value = "";
+    this.setStudentPhotoPreview("");
+  },
+
   async saveStudentForm(e) {
     if (e) e.preventDefault();
+    const originalName = document.getElementById("studentOriginalName").value.trim();
     const name = document.getElementById("studentNameInput").value.trim();
     const password = document.getElementById("studentPasswordInput").value.trim();
     const phone = document.getElementById("studentPhoneInput").value.trim();
+    const photo = document.getElementById("studentPhotoInput").value.trim();
 
     if (!name || !password) {
       alert("សូមបំពេញឈ្មោះ និងលេខសម្ងាត់សិស្ស!");
       return;
     }
 
-    await window.TeachData.saveStudent({ name, password, phone });
+    await window.TeachData.saveStudent({ name, password, phone, photo }, originalName);
     this.closeStudentModal();
     this.loadStudentsTable();
     window.ExamEngine.populateStudentDropdown();
-    alert("បន្ថែមសិស្សជោគជ័យ!");
+    alert("រក្សាទុកព័ត៌មានសិស្សជោគជ័យ!");
   },
 
   async confirmDeleteStudent(name) {

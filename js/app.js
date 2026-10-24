@@ -122,10 +122,19 @@ const App = {
     const el = document.getElementById("studentWorkspaceView");
     if (el) el.style.display = "block";
 
-    // Set greeting name
+    // Set greeting name and photo avatar
     const nameEl = document.getElementById("studentGreetingName");
     if (nameEl && studentObj) {
       nameEl.innerText = studentObj.name;
+    }
+
+    const avatarDisplay = document.getElementById("studentAvatarDisplay");
+    if (avatarDisplay) {
+      if (studentObj && studentObj.photo) {
+        avatarDisplay.innerHTML = `<img src="${this.escapeHtml(studentObj.photo)}" class="student-workspace-avatar" alt="Student Photo" onerror="this.outerHTML='<div class=\\'student-workspace-avatar-fallback\\'><i class=\\'fa-solid fa-user-graduate\\'></i></div>'">`;
+      } else {
+        avatarDisplay.innerHTML = `<div class="student-workspace-avatar-fallback"><i class="fa-solid fa-user-graduate"></i></div>`;
+      }
     }
 
     // Show banner if teacher is previewing
@@ -240,6 +249,15 @@ const App = {
         </button>
       `;
     }
+  },
+
+  escapeHtml: function(text) {
+    return String(text || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 };
 
