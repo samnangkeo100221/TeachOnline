@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TeachOnline - ប្រព័ន្ធបង្រៀន និងប្រឡងអនឡាញ</title>
+
+  <!-- External Libraries -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leader-line/1.0.7/leader-line.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script>
+    window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+  </script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Application Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Top Global Header Bar -->
+  <header class="app-header">
+    <div class="brand-title">
+      <img src="https://play-lh.googleusercontent.com/ErG9BhTUtkkdB1BbTcvCdEW9bfzwV6DX-Vphk_ibx2DoCaIe9-OMBiiiXAfM2aPNsmgv7terPJHP3sNr-GRazlE" alt="TeachOnline Logo">
+      <span>TeachOnline</span>
+    </div>
+    <div class="header-actions">
+      <!-- Switch to Teacher Portal Button -->
+      <button id="btnSwitchTeacher" class="switch-portal-btn" type="button" title="ផ្ទាំងគ្រប់គ្រងសម្រាប់លោកគ្រូ">
+        <i class="fa-solid fa-chalkboard-user"></i> <span>ផ្ទាំងគ្រូ (Teacher Panel)</span>
+      </button>
+      <!-- Switch to Student Portal Button (Visible in teacher mode) -->
+      <button id="btnSwitchStudent" class="switch-portal-btn student-mode" type="button" style="display:none;" title="ផ្ទាំងសម្រាប់សិស្ស">
+        <i class="fa-solid fa-graduation-cap"></i> <span>ផ្ទាំងសិស្ស (Student View)</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================================
+       1. STUDENT PORTAL (ផ្ទាំងសម្រាប់សិស្ស)
+       ======================================================== -->
+  <main id="studentView" class="exam-panel">
+    <!-- Countdown Timer (Visible during exam) -->
+    <div class="timer hidden" id="timer">
+      <i class="fa-regular fa-clock"></i> <span>60:00</span>
+    </div>
+
+    <div class="container">
+      <!-- Login & Lesson Selection Section -->
+      <div id="loginSection">
+        <!-- Logo and Hero Banner -->
+        <div class="modern-card" style="text-align: center; padding: 2.5rem 1.5rem;">
+          <img src="https://play-lh.googleusercontent.com/ErG9BhTUtkkdB1BbTcvCdEW9bfzwV6DX-Vphk_ibx2DoCaIe9-OMBiiiXAfM2aPNsmgv7terPJHP3sNr-GRazlE" alt="TeachOnline Logo" style="width: 220px; height: 220px; object-fit: contain; margin-bottom: 12px; filter: drop-shadow(0px 8px 16px rgba(0,0,0,0.12));">
+          <h1 style="color: var(--primary); margin: 0; font-size: 2.5rem; font-weight: 800;">TeachOnline</h1>
+          <p style="color: var(--text-muted); margin-top: 0.5rem; font-size: 1.4rem; font-weight: 600;">រៀបចំ និងគ្រប់គ្រងដោយលោកគ្រូ កែវ សំណាង</p>
+        </div>
+
+        <!-- Lesson Selector Card -->
+        <div class="modern-card">
+          <h2 class="modern-card-title"><i class="fa-solid fa-book-open-reader"></i> ជ្រើសរើសមេរៀនដើម្បីសិក្សា</h2>
+          <div class="grid-2-col">
+            <div class="form-group">
+              <label><i class="fa-solid fa-book"></i> Lesson (មេរៀន)</label>
+              <select id="lessonSelect">
+                <option value="">ជ្រើសរើស Lesson...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label><i class="fa-solid fa-layer-group"></i> Level (កម្រិត)</label>
+              <select id="levelSelect">
+                <option value="">ជ្រើសរើស Level...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lesson Multimedia & Rich Content Container (Videos & Lesson Notes) -->
+        <div id="mediaContainer" class="modern-card" style="display: none; padding: 0; overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%); color: white; padding: 1.25rem 2rem; font-size: 1.5rem; font-weight: bold; display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-clapperboard"></i> <span>វីដេអូពន្យល់ និងខ្លឹមសារមេរៀន</span>
+          </div>
+
+          <div style="padding: 2rem;">
+            <!-- Videos Container (Supports YouTube, Shorts, TikTok, Facebook) -->
+            <div class="video-grid-container">
+              <!-- Video 1 -->
+              <div id="videoWrapper1" class="video-responsive-wrapper" style="display: none;">
+                <div class="video-title-label">
+                  <i class="fa-brands fa-youtube" style="color:#ef4444;"></i> វីដេអូទី ១
+                </div>
+                <div id="videoContent1"></div>
+              </div>
+
+              <!-- Video 2 -->
+              <div id="videoWrapper2" class="video-responsive-wrapper" style="display: none;">
+                <div class="video-title-label">
+                  <i class="fa-solid fa-play-circle" style="color:#3b82f6;"></i> វីដេអូទី ២
+                </div>
+                <div id="videoContent2"></div>
+              </div>
+            </div>
+
+            <!-- Rich Lesson Theory & Sections -->
+            <div id="lessonDataContainer" style="display: none;">
+              <h2 id="lsnTitle" style="color: var(--primary); text-align: center; margin-top: 1rem; margin-bottom: 1.5rem; font-size: 2.2rem; font-weight: 800;"></h2>
+              
+              <div id="lsnObjContainer" class="lsn-section">
+                <h3><i class="fa-solid fa-bullseye"></i> វត្ថុបំណងមេរៀន (Objectives)</h3>
+                <div id="lsnObj" class="lsn-content-inner"></div>
+              </div>
+
+              <div id="lsnContentContainer" class="lsn-section">
+                <h3><i class="fa-solid fa-book-bookmark"></i> ខ្លឹមសារមេរៀន / ទ្រឹស្តី (Content)</h3>
+                <div id="lsnContent" class="lsn-content-inner"></div>
+              </div>
+
+              <div id="lsnFormulaContainer" class="lsn-section formula-section">
+                <h3><i class="fa-solid fa-square-root-variable"></i> សង្ខេបរូបមន្ត (Formula Summary)</h3>
+                <div id="lsnFormula" class="lsn-content-inner"></div>
+              </div>
+
+              <div id="lsnExamplesContainer" class="lsn-section example-section">
+                <h3><i class="fa-solid fa-lightbulb"></i> ឧទាហរណ៍ និងដំណោះស្រាយ (Examples)</h3>
+                <div id="lsnExamples" class="lsn-content-inner"></div>
+              </div>
+
+              <div id="lsnNotesContainer" class="lsn-section">
+                <h3><i class="fa-solid fa-note-sticky"></i> ចំណាំសំខាន់ៗ (Notes)</h3>
+                <div id="lsnNotes" class="lsn-content-inner"></div>
+              </div>
+
+              <div id="lsnErrorsContainer" class="lsn-section error-section">
+                <h3><i class="fa-solid fa-triangle-exclamation"></i> កំហុសឧស្សាហ៍ជួប និងការកែតម្រូវ (Common Errors)</h3>
+                <div id="lsnErrors" class="lsn-content-inner"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Student Authentication Card -->
+        <div class="modern-card">
+          <h2 class="modern-card-title"><i class="fa-solid fa-shield-halved"></i> បំពេញព័ត៌មានដើម្បីចូលប្រឡង</h2>
+          <div class="grid-2-col">
+            <div class="form-group">
+              <label><i class="fa-solid fa-user-graduate"></i> ឈ្មោះសិស្ស</label>
+              <select id="studentSelect">
+                <option value="">កំពុងទាញយកបញ្ជីសិស្ស...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label><i class="fa-solid fa-key"></i> លេខសម្ងាត់សិស្ស</label>
+              <input type="password" id="passwordInput" placeholder="បញ្ចូលលេខសម្ងាត់របស់អ្នក...">
+            </div>
+          </div>
+          
+          <div id="loginMessage" style="margin-top: 15px; margin-bottom: 15px; text-align: center; font-size: 1.3rem; min-height: 25px; font-weight: 600;"></div>
+          
+          <button class="primary-btn submit-btn" onclick="ExamEngine.loginAndStartExam()" style="margin-top: 10px;">
+            <span>ចូលប្រឡង (Start Exam)</span> <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Exam Section -->
+      <div id="examSection" class="hidden">
+        <h2 id="examTitle" style="text-align: center; font-size: 2rem; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.3); margin-bottom: 1.5rem; font-weight: 800;"></h2>
+        
+        <!-- Rendered Questions Container -->
+        <div id="questionsContainer"></div>
+
+        <!-- Submit Button -->
+        <button class="submit-btn" onclick="ExamEngine.submitExam()" style="margin-top: 2rem;">
+          <i class="fa-solid fa-paper-plane"></i> បញ្ជូនចម្លើយ (Submit Exam)
+        </button>
+
+        <!-- Reset Button -->
+        <div style="margin-top: 20px; text-align: center;">
+          <button type="button" onclick="ExamEngine.resetExamAndLogin()" style="background: #475569; color: white; width: auto; font-size: 20px !important; min-height: 50px;">
+            <i class="fa-solid fa-arrow-rotate-left"></i> ត្រឡប់ទៅជ្រើសរើសមេរៀន / ចូលប្រឡងសារជាថ្មី
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================
+       2. TEACHER ADMIN PANEL (ផ្ទាំងគ្រប់គ្រងសម្រាប់លោកគ្រូ)
+       ======================================================== -->
+  <main id="teacherView" class="teacher-panel" style="display: none;">
+    <div class="container" style="max-width: 1250px;">
+      <!-- Admin Top Card -->
+      <div class="modern-card" style="padding: 1.5rem 2rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+        <div>
+          <h1 style="margin: 0; color: var(--primary); font-size: 2rem; font-weight: 800;">
+            <i class="fa-solid fa-chalkboard-user"></i> ផ្ទាំងគ្រប់គ្រងលោកគ្រូ (Teacher Admin)
+          </h1>
+          <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 18px;">
+            គ្រប់គ្រងមេរៀន វីដេអូ សំណួរប្រឡង បញ្ជីសិស្ស និងពិន្ទុ Supabase / Google Sheet
+          </p>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="switch-portal-btn student-mode" onclick="App.switchToStudentView()">
+            <i class="fa-solid fa-arrow-left"></i> ទៅកាន់ផ្ទាំងសិស្ស
+          </button>
+          <button type="button" class="switch-portal-btn" style="background:#ef4444;" onclick="AdminEngine.logoutTeacher()">
+            <i class="fa-solid fa-right-from-bracket"></i> ចាកចេញ
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Stats Counter Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+            <i class="fa-solid fa-user-graduate"></i>
+          </div>
+          <div>
+            <div class="stat-val" id="statStudentCount">0</div>
+            <div class="stat-label">សិស្សសរុប</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #047857);">
+            <i class="fa-solid fa-book"></i>
+          </div>
+          <div>
+            <div class="stat-val" id="statLessonCount">0</div>
+            <div class="stat-label">មេរៀនសរុប</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #b45309);">
+            <i class="fa-solid fa-circle-question"></i>
+          </div>
+          <div>
+            <div class="stat-val" id="statQuestionCount">0</div>
+            <div class="stat-label">សំណួរប្រឡង</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">
+            <i class="fa-solid fa-square-poll-vertical"></i>
+          </div>
+          <div>
+            <div class="stat-val" id="statResultCount">0</div>
+            <div class="stat-label">លទ្ធផលប្រឡង</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="admin-tabs">
+        <button class="admin-tab-btn active" data-tab="lessons">
+          <i class="fa-solid fa-book-open"></i> មេរៀន និងវីដេអូ
+        </button>
+        <button class="admin-tab-btn" data-tab="questions">
+          <i class="fa-solid fa-circle-question"></i> សំណួរប្រឡង
+        </button>
+        <button class="admin-tab-btn" data-tab="students">
+          <i class="fa-solid fa-users"></i> បញ្ជីសិស្ស
+        </button>
+        <button class="admin-tab-btn" data-tab="results">
+          <i class="fa-solid fa-award"></i> លទ្ធផលប្រឡង
+        </button>
+        <button class="admin-tab-btn" data-tab="settings">
+          <i class="fa-solid fa-gear"></i> ការកំណត់ & Cloud
+        </button>
+      </div>
+
+      <!-- Tab 1: Lessons & Videos Content -->
+      <div id="tab_lessons" class="admin-tab-content modern-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+          <h2 style="margin: 0; color: var(--primary); font-size: 1.6rem;">📚 បញ្ជីមេរៀន និងវីដេអូបង្រៀន</h2>
+          <button class="primary-btn" onclick="AdminEngine.openAddLessonModal()" style="width: auto !important; min-height: 45px !important; font-size: 18px !important; padding: 10px 20px !important;">
+            <i class="fa-solid fa-plus"></i> បន្ថែមមេរៀនថ្មី
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th>មេរៀន & ចំណងជើង</th>
+                <th>Level</th>
+                <th>វីដេអូ (YouTube / TikTok / FB)</th>
+                <th>រយៈពេលប្រឡង</th>
+                <th style="width: 180px;">សកម្មភាព</th>
+              </tr>
+            </thead>
+            <tbody id="lessonsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 2: Questions Content -->
+      <div id="tab_questions" class="admin-tab-content modern-card" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <h2 style="margin: 0; color: var(--primary); font-size: 1.6rem;">❓ ធនាគារសំណួរប្រឡង</h2>
+            <select id="filterQuestionLesson" onchange="AdminEngine.loadQuestionsTable()" style="min-height: 45px; width: 280px; font-size: 18px;">
+              <option value="">-- បង្ហាញគ្រប់មេរៀន --</option>
+            </select>
+          </div>
+          <button class="primary-btn" onclick="AdminEngine.openAddQuestionModal()" style="width: auto !important; min-height: 45px !important; font-size: 18px !important; padding: 10px 20px !important;">
+            <i class="fa-solid fa-plus"></i> បន្ថែមសំណួរថ្មី
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th>សំណួរ</th>
+                <th>ប្រភេទ</th>
+                <th>មេរៀន & Level</th>
+                <th>ចម្លើយត្រូវ</th>
+                <th>ពិន្ទុ</th>
+                <th style="width: 160px;">សកម្មភាព</th>
+              </tr>
+            </thead>
+            <tbody id="questionsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 3: Students Content -->
+      <div id="tab_students" class="admin-tab-content modern-card" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+          <h2 style="margin: 0; color: var(--primary); font-size: 1.6rem;">👥 បញ្ជីឈ្មោះសិស្ស</h2>
+          <button class="primary-btn" onclick="AdminEngine.openAddStudentModal()" style="width: auto !important; min-height: 45px !important; font-size: 18px !important; padding: 10px 20px !important;">
+            <i class="fa-solid fa-user-plus"></i> បន្ថែមសិស្សថ្មី
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 60px;">#</th>
+                <th>ឈ្មោះសិស្ស</th>
+                <th>លេខសម្ងាត់</th>
+                <th>លេខទូរស័ព្ទ</th>
+                <th style="width: 120px;">សកម្មភាព</th>
+              </tr>
+            </thead>
+            <tbody id="studentsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 4: Results Content -->
+      <div id="tab_results" class="admin-tab-content modern-card" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+          <h2 style="margin: 0; color: var(--primary); font-size: 1.6rem;">🏆 កំណត់ត្រាលទ្ធផលប្រឡង</h2>
+          <button class="primary-btn" onclick="AdminEngine.exportResultsToCSV()" style="width: auto !important; min-height: 45px !important; font-size: 18px !important; padding: 10px 20px !important; background: #059669 !important;">
+            <i class="fa-solid fa-file-excel"></i> Export ជា CSV
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th>ឈ្មោះសិស្ស & កាលបរិច្ឆេទ</th>
+                <th>មេរៀន</th>
+                <th>ពិន្ទុ</th>
+                <th>ភាគរយ</th>
+                <th style="width: 140px;">ចម្លើយ</th>
+                <th style="width: 100px;">Sync</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 5: Settings & Cloud Sync -->
+      <div id="tab_settings" class="admin-tab-content modern-card" style="display: none;">
+        <h2 style="margin: 0 0 1.5rem 0; color: var(--primary); font-size: 1.6rem;">⚙️ ការកំណត់ប្រព័ន្ធ & Cloud Integration</h2>
+        
+        <form onsubmit="AdminEngine.saveSettingsForm(event)">
+          <!-- Teacher PIN -->
+          <div class="form-group">
+            <label><i class="fa-solid fa-lock"></i> លេខកូដសម្ងាត់គ្រូ (Teacher PIN)</label>
+            <input type="text" id="setTeacherPin" placeholder="Default: 123456" required>
+            <small style="color:var(--text-muted); font-size:16px;">លេខកូដនេះសម្រាប់គ្រូ Login ចូលផ្ទាំង Admin</small>
+          </div>
+
+          <!-- Supabase Connection -->
+          <div style="margin-top: 2rem; border-top: 2px dashed #e2e8f0; padding-top: 1.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <h3 style="margin:0; color:#10b981;"><i class="fa-solid fa-database"></i> ការភ្ជាប់ Supabase Database</h3>
+              <div id="supabaseStatusBadge"></div>
+            </div>
+            
+            <div class="form-group">
+              <label>Supabase Project URL</label>
+              <input type="text" id="setSupabaseUrl" placeholder="https://xyzcompany.supabase.co">
+            </div>
+
+            <div class="form-group">
+              <label>Supabase Anon Public API Key</label>
+              <input type="password" id="setSupabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+            </div>
+
+            <button type="button" onclick="AdminEngine.testSupabaseConnection()" style="background:#10b981; width:auto; font-size:18px !important; min-height:45px; padding:10px 20px; margin-bottom:1.5rem;">
+              <i class="fa-solid fa-plug"></i> តេស្តការភ្ជាប់ Supabase
+            </button>
+          </div>
+
+          <!-- Google Sheet Webhook Sync -->
+          <div style="margin-top: 1.5rem; border-top: 2px dashed #e2e8f0; padding-top: 1.5rem;">
+            <h3 style="margin:0 0 1rem 0; color:#059669;"><i class="fa-solid fa-table"></i> Google Sheet Forwarding (Web App URL)</h3>
+            <div class="form-group">
+              <label>Google Apps Script Web App URL</label>
+              <input type="text" id="setGoogleSheetUrl" placeholder="https://script.google.com/macros/s/.../exec">
+              <small style="color:var(--text-muted); font-size:16px;">ពេលសិស្សប្រឡងរួច ប្រព័ន្ធនឹង forward លទ្ធផលទៅកាន់ Google Sheet នេះដោយស្វ័យប្រវត្តិ</small>
+            </div>
+            <button type="button" onclick="AdminEngine.testGoogleSheetWebhook()" style="background:#059669; width:auto; font-size:18px !important; min-height:45px; padding:10px 20px; margin-bottom:1.5rem;">
+              <i class="fa-solid fa-paper-plane"></i> តេស្តផ្ញើទៅ Google Sheet
+            </button>
+          </div>
+
+          <!-- Telegram Bot Notifications -->
+          <div style="margin-top: 1.5rem; border-top: 2px dashed #e2e8f0; padding-top: 1.5rem;">
+            <h3 style="margin:0 0 1rem 0; color:#0284c7;"><i class="fa-brands fa-telegram"></i> Telegram Notifications</h3>
+            <div class="grid-2-col">
+              <div class="form-group">
+                <label>Telegram Bot Token</label>
+                <input type="text" id="setTelegramToken" placeholder="8904689851:AAG...">
+              </div>
+              <div class="form-group">
+                <label>Telegram Chat ID</label>
+                <input type="text" id="setTelegramChatId" placeholder="-1004369015499">
+              </div>
+            </div>
+          </div>
+
+          <!-- Gemini AI Evaluation -->
+          <div style="margin-top: 1.5rem; border-top: 2px dashed #e2e8f0; padding-top: 1.5rem;">
+            <h3 style="margin:0 0 1rem 0; color:#6366f1;"><i class="fa-solid fa-wand-magic-sparkles"></i> Gemini AI Evaluation (សម្រាប់កែចម្លើយសរសេរ)</h3>
+            <div class="form-group">
+              <label>Google Gemini API Key</label>
+              <input type="password" id="setGeminiKey" placeholder="AIzaSy...">
+            </div>
+          </div>
+
+          <button type="submit" class="primary-btn" style="margin-top: 2rem;">
+            <i class="fa-solid fa-floppy-disk"></i> រក្សាទុកការកំណត់
+          </button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================
+       MODALS
+       ======================================================== -->
+
+  <!-- Teacher PIN Verification Modal -->
+  <div id="teacherAuthModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content" style="max-width: 480px; text-align: center;">
+      <div style="font-size: 50px; color: var(--primary); margin-bottom: 12px;">
+        <i class="fa-solid fa-user-shield"></i>
+      </div>
+      <h2 style="margin: 0 0 8px 0; color: var(--text-main);">ផ្ទៀងផ្ទាត់សិទ្ធិលោកគ្រូ</h2>
+      <p style="color: var(--text-muted); font-size: 18px; margin-bottom: 20px;">សូមបញ្ចូលលេខកូដសម្ងាត់ (Teacher PIN) ដើម្បីបើកផ្ទាំងគ្រប់គ្រង</p>
+      
+      <input type="password" id="teacherPinInput" placeholder="បញ្ចូលលេខកូដសម្ងាត់..." style="text-align: center; font-size: 26px; letter-spacing: 4px; margin-bottom: 15px;" autofocus>
+      <div id="teacherPinError" style="color: var(--error); font-size: 16px; margin-bottom: 15px; font-weight: 600;"></div>
+
+      <div style="display: flex; gap: 10px;">
+        <button type="button" class="primary-btn" onclick="AdminEngine.verifyTeacherPin()" style="flex: 2;">
+          <i class="fa-solid fa-key"></i> ចូលគ្រប់គ្រង
+        </button>
+        <button type="button" onclick="AdminEngine.closeLoginModal()" style="background: #94a3b8; flex: 1;">
+          បោះបង់
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lesson Add/Edit Modal -->
+  <div id="lessonModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content" style="max-width: 850px;">
+      <div class="modal-header">
+        <h3 id="lessonModalTitle"><i class="fa-solid fa-book"></i> មេរៀន និងវីដេអូ</h3>
+        <button class="close-modal-btn" onclick="AdminEngine.closeLessonModal()">&times;</button>
+      </div>
+
+      <form id="lessonForm" onsubmit="AdminEngine.saveLessonForm(event)">
+        <input type="hidden" id="lessonOriginalName">
+        <input type="hidden" id="lessonOriginalLevel">
+
+        <div class="grid-2-col">
+          <div class="form-group">
+            <label>ឈ្មោះមេរៀន (Lesson Name) *</label>
+            <input type="text" id="lessonNameInput" placeholder="ឧទាហរណ៍៖ Lesson 1: Present Simple" required>
+          </div>
+          <div class="form-group">
+            <label>កម្រិត (Level) *</label>
+            <input type="text" id="lessonLevelInput" placeholder="ឧទាហរណ៍៖ Level 1" required>
+          </div>
+        </div>
+
+        <div class="grid-2-col">
+          <div class="form-group">
+            <label>ចំណងជើងជាភាសាខ្មែរ (Title)</label>
+            <input type="text" id="lessonTitleInput" placeholder="ឧទាហរណ៍៖ មេរៀនទី ១ ៖ បច្ចុប្បន្នកាលធម្មតា">
+          </div>
+          <div class="form-group">
+            <label>រយៈពេលប្រឡង (នាទី)</label>
+            <input type="number" id="lessonDurationInput" value="60" min="5" max="300">
+          </div>
+        </div>
+
+        <!-- Video Links (Supports YouTube, Shorts, TikTok, Facebook, MP4) -->
+        <div style="background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+          <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 20px;">
+            <i class="fa-solid fa-video"></i> តំណភ្ជាប់វីដេអូ (YouTube, Shorts, TikTok, Facebook, MP4)
+          </h4>
+          <div class="form-group">
+            <label>តំណភ្ជាប់វីដេអូទី ១</label>
+            <input type="text" id="lessonVideo1Input" placeholder="Paste link YouTube, Shorts, TikTok ឬ Facebook នៅទីនេះ...">
+          </div>
+          <div class="form-group">
+            <label>តំណភ្ជាប់វីដេអូទី ២</label>
+            <input type="text" id="lessonVideo2Input" placeholder="Paste link វីដេអូបន្ថែម...">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>🎯 វត្ថុបំណងមេរៀន (Objectives)</label>
+          <textarea id="lessonObjInput" rows="3" placeholder="- យល់ច្បាស់អំពីរចនាសម្ព័ន្ធ..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>📖 ខ្លឹមសារមេរៀន / ទ្រឹស្តី (Content - Supports Markdown & MathJax)</label>
+          <textarea id="lessonContentInput" rows="6" placeholder="សរសេរទ្រឹស្តីមេរៀននៅទីនេះ..."></textarea>
+        </div>
+
+        <div class="grid-2-col">
+          <div class="form-group">
+            <label>📐 សង្ខេបរូបមន្ត (Formula Summary)</label>
+            <textarea id="lessonFormulaInput" rows="3" placeholder="S + V(s/es) + O..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>💡 ឧទាហរណ៍ (Examples)</label>
+            <textarea id="lessonExamplesInput" rows="3" placeholder="He plays football..."></textarea>
+          </div>
+        </div>
+
+        <div class="grid-2-col">
+          <div class="form-group">
+            <label>📌 ចំណាំ (Notes)</label>
+            <textarea id="lessonNotesInput" rows="3" placeholder="ចំណាំពិសេស..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>⚠️ កំហុសឧស្សាហ៍ជួប (Common Errors)</label>
+            <textarea id="lessonErrorsInput" rows="3" placeholder="❌ ខុស: ... ✅ ត្រូវ: ..."></textarea>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+          <button type="submit" class="primary-btn" style="flex: 2;">
+            <i class="fa-solid fa-floppy-disk"></i> រក្សាទុកមេរៀន
+          </button>
+          <button type="button" onclick="AdminEngine.closeLessonModal()" style="background: #94a3b8; flex: 1;">
+            បោះបង់
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Question Add/Edit Modal -->
+  <div id="questionModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content" style="max-width: 850px;">
+      <div class="modal-header">
+        <h3 id="questionModalTitle"><i class="fa-solid fa-circle-question"></i> សំណួរប្រឡង</h3>
+        <button class="close-modal-btn" onclick="AdminEngine.closeQuestionModal()">&times;</button>
+      </div>
+
+      <form id="questionForm" onsubmit="AdminEngine.saveQuestionForm(event)">
+        <input type="hidden" id="questionIdInput">
+
+        <div class="grid-2-col">
+          <div class="form-group">
+            <label>មេរៀន (Lesson) *</label>
+            <select id="qLessonSelect" required></select>
+          </div>
+          <div class="form-group">
+            <label>កម្រិត (Level) *</label>
+            <select id="qLevelSelect" required>
+              <option value="Level 1">Level 1</option>
+              <option value="Level 2">Level 2</option>
+              <option value="Level 3">Level 3</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-2-col">
+          <div class="form-group">
+            <label>ប្រភេទសំណួរ (Question Type) *</label>
+            <select id="qTypeSelect" required>
+              <option value="MCQ_TEXT">MCQ_TEXT (ជ្រើសរើសចម្លើយ អត្ថបទ)</option>
+              <option value="MCQ_IMAGE">MCQ_IMAGE (ជ្រើសរើសចម្លើយ រូបភាព)</option>
+              <option value="MCQ_AUDIO">MCQ_AUDIO (ជ្រើសរើសចម្លើយ សំឡេង)</option>
+              <option value="TRUE_FALSE">TRUE_FALSE (ត្រូវ ឬ ខុស)</option>
+              <option value="FILL">FILL (បំពេញចន្លោះប្រហោង {{input1}})</option>
+              <option value="SHORT_ANSWER">SHORT_ANSWER (សរសេរចម្លើយខ្លី)</option>
+              <option value="MATCHING">MATCHING (ផ្គូផ្គងឆ្វេង-ស្តាំ)</option>
+              <option value="DRAG_DROP">DRAG_DROP (រៀបលំដាប់ពាក្យ)</option>
+              <option value="LISTEN_WRITE">LISTEN_WRITE (ស្តាប់សំឡេង រួចសរសេរ)</option>
+              <option value="READING">READING (អានអត្ថបទ រួចឆ្លើយ)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ពិន្ទុ (Points) *</label>
+            <input type="number" id="qPointsInput" value="1" min="1" max="100" required>
+          </div>
+        </div>
+
+        <div class="grid-2-col">
+          <div class="form-group">
+            <label>ចំណងជើងផ្នែក / ប្រភេទ (Category)</label>
+            <input type="text" id="qCategoryInput" placeholder="ឧទាហរណ៍៖ Grammar Rules, Vocabulary...">
+          </div>
+          <div class="form-group">
+            <label>ភាសាអាន (Language Code)</label>
+            <select id="qLanguageSelect">
+              <option value="en-US">English (en-US)</option>
+              <option value="km-KH">Khmer (km-KH)</option>
+              <option value="zh-CN">Chinese (zh-CN)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>ចំណងជើងសំណួរ (Question Title)</label>
+          <input type="text" id="qTitleInput" placeholder="ឧទាហរណ៍៖ Choose the correct verb form">
+        </div>
+
+        <div class="form-group">
+          <label>តួអក្សរសំណួរ (Question Text)</label>
+          <textarea id="qTextInput" rows="3" placeholder="ឧទាហរណ៍៖ She _______ to music every morning. (ឬប្រើ {{input1}} សម្រាប់ FILL)"></textarea>
+        </div>
+
+        <div class="grid-2-col">
+          <div class="form-group">
+            <label>សំឡេងអាន (Speech Text សម្រាប់ TTS)</label>
+            <input type="text" id="qSpeechTextInput" placeholder="អក្សរដែលត្រូវឱ្យកុំព្យូទ័រអានបញ្ចេញសំឡេង...">
+          </div>
+          <div class="form-group">
+            <label>តំណភ្ជាប់រូបភាព ឬសំឡេង (Media URL)</label>
+            <input type="text" id="qMediaUrlInput" placeholder="https://example.com/image.png">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>ជម្រើសចម្លើយ (Options - ញែកដោយសញ្ញា |)</label>
+          <input type="text" id="qOptionsInput" placeholder="ឧទាហរណ៍៖ listen|listens|listening|listened">
+          <small style="color:var(--text-muted); font-size:16px;">សម្រាប់ MCQ ឬ Drag Words</small>
+        </div>
+
+        <div class="form-group">
+          <label>ចម្លើយត្រឹមត្រូវ (Correct Answer) *</label>
+          <input type="text" id="qCorrectAnswerInput" placeholder="ឧទាហរណ៍៖ listens (ឬ TRUE, ឬ blanks: boils|melts, ឬ JSON សម្រាប់ matching)" required>
+        </div>
+
+        <div class="form-group">
+          <label>ទិន្នន័យបន្ថែម JSON (Data Extra សម្រាប់ Matching: {"left":[...], "right":[...]})</label>
+          <textarea id="qDataExtraInput" rows="3" placeholder='{"left":["Apple","Book"],"right":["ផ្លែប៉ោម","សៀវភៅ"]}'></textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+          <button type="submit" class="primary-btn" style="flex: 2;">
+            <i class="fa-solid fa-floppy-disk"></i> រក្សាទុកសំណួរ
+          </button>
+          <button type="button" onclick="AdminEngine.closeQuestionModal()" style="background: #94a3b8; flex: 1;">
+            បោះបង់
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Student Add Modal -->
+  <div id="studentModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-plus"></i> បន្ថែមសិស្សថ្មី</h3>
+        <button class="close-modal-btn" onclick="AdminEngine.closeStudentModal()">&times;</button>
+      </div>
+
+      <form id="studentForm" onsubmit="AdminEngine.saveStudentForm(event)">
+        <div class="form-group">
+          <label>ឈ្មោះសិស្ស *</label>
+          <input type="text" id="studentNameInput" placeholder="ឧទាហរណ៍៖ សុខ សាន" required>
+        </div>
+        <div class="form-group">
+          <label>លេខសម្ងាត់សិស្ស *</label>
+          <input type="text" id="studentPasswordInput" placeholder="ឧទាហរណ៍៖ 1234" required>
+        </div>
+        <div class="form-group">
+          <label>លេខទូរស័ព្ទ</label>
+          <input type="text" id="studentPhoneInput" placeholder="012345678">
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+          <button type="submit" class="primary-btn" style="flex: 2;">
+            <i class="fa-solid fa-floppy-disk"></i> រក្សាទុក
+          </button>
+          <button type="button" onclick="AdminEngine.closeStudentModal()" style="background: #94a3b8; flex: 1;">
+            បោះបង់
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Exam Result Detailed View Modal -->
+  <div id="resultDetailModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content" style="max-width: 750px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-file-invoice"></i> សន្លឹកកិច្ចការ និងចម្លើយសិស្សលម្អិត</h3>
+        <button class="close-modal-btn" onclick="AdminEngine.closeResultDetailModal()">&times;</button>
+      </div>
+      <div id="resultDetailBody"></div>
+      <div style="margin-top: 1.5rem; text-align: right;">
+        <button type="button" onclick="AdminEngine.closeResultDetailModal()" style="background: var(--primary); width: auto; font-size: 18px !important; min-height: 45px; padding: 10px 24px;">
+          បិទផ្ទាំង
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic Scripts -->
+  <script src="data/initial-data.js"></script>
+  <script src="js/media-embed.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/exam.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
